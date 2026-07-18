@@ -1,0 +1,89 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  COMPANY
+  COURIER
+  ADMIN
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum TransactionType {
+  DEBIT
+  CREDIT
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  role         UserRole
+  createdAt    DateTime      @default(now())
+  company      Company?
+  courier      Courier?
+  transactions Transaction[]
+}
+
+model Company {
+  id             String     @id @default(uuid())
+  userId         String     @unique
+  name           String
+  defaultAddress String
+  phone          String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries     Delivery[]
+}
+
+model Courier {
+  id          String     @id @default(uuid())
+  userId      String     @unique
+  name        String
+  phone       String
+  vehicleType String
+  isAvailable Boolean    @default(true)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries  Delivery[]
+}
+
+model Delivery {
+  id               String         @id @default(uuid())
+  companyId        String
+  courierId        String?
+  pickupAddress    String
+  dropoffAddress   String
+  packageType      String
+  price            Decimal
+  finalPrice       Decimal        @default(0)
+  commissionAmount Decimal        @default(0)
+  status           DeliveryStatus @default(PENDING)
+  receiverName     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  courier          Courier?       @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  transactions     Transaction[]
+}
+
+model Transaction {
+  id         String          @id @default(uuid())
+  amount     Decimal
+  type       TransactionType
+  status     String          @default("COMPLETED")
+  deliveryId String?
+  userId     String?
+  createdAt  DateTime        @default(now())
+  delivery   Delivery?       @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
