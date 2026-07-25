@@ -4,7 +4,7 @@ export type UserRole = "COMPANY" | "COURIER" | "ADMIN";
 /** Valid transition map: current → allowed next states */
 const transitions: Record<DeliveryStatus, DeliveryStatus[]> = {
   PENDING:    ["ASSIGNED", "CANCELLED"],
-  ASSIGNED:   ["IN_TRANSIT", "CANCELLED"],
+  ASSIGNED:   ["IN_TRANSIT", "DELIVERED", "CANCELLED"],
   IN_TRANSIT: ["DELIVERED", "CANCELLED"],
   DELIVERED:  [],
   CANCELLED:  [],
@@ -18,6 +18,7 @@ const roleGuards: Partial<Record<DeliveryStatus, Partial<Record<DeliveryStatus, 
   },
   ASSIGNED: {
     IN_TRANSIT: ["COURIER", "ADMIN"],
+    DELIVERED:  ["COURIER", "ADMIN"],
     CANCELLED:  ["ADMIN"],
   },
   IN_TRANSIT: {

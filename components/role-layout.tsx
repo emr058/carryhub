@@ -2,12 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-  Bell, ChevronDown, ChevronRight, Grid2X2, Menu, Route, Settings2, Check, X,
-  type LucideIcon
+  Bell, ChevronRight, LogOut, Menu, Route, User, Settings2,
+  type LucideIcon,
 } from "lucide-react";
-import { Badge, Card } from "@/components/ui";
+import { useAuth } from "@/components/auth-provider";
+import { Card } from "@/components/ui";
 
 type NavItem = {
   id: string;
@@ -22,10 +23,10 @@ type NavGroup = {
   items: readonly NavItem[];
 };
 
-type Role = "Operasyon" | "Şirket" | "Kurye" | "Yönetici";
+type RoleLabel = "Operasyon" | "Şirket" | "Kurye";
 
 interface RoleLayoutProps {
-  role: Role;
+  role: RoleLabel;
   navGroups: readonly {
     readonly group: string;
     readonly items: readonly {
@@ -40,22 +41,26 @@ interface RoleLayoutProps {
   children: ReactNode;
 }
 
-const roleRoutes: Record<Role, string> = {
-  "Operasyon": "/ops",
-  "Şirket": "/company",
-  "Kurye": "/courier",
-  "Yönetici": "/ops/intelligence"
+/** Map role label → profile URL */
+const profileHref: Record<RoleLabel, string> = {
+  Operasyon: "/ops/profile",
+  Şirket: "/company/profile",
+  Kurye: "/courier/profile",
 };
 
 export default function RoleLayout({ role, navGroups, currentLabel, children }: RoleLayoutProps) {
   const [sidebar, setSidebar] = useState(false);
   const [notifications, setNotifications] = useState(false);
+  const [userMenu, setUserMenu] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
+  const { user, loading, signOut } = useAuth();
 
-  const handleRoleChange = (selectedRole: Role) => {
-    router.push(roleRoutes[selectedRole]);
-  };
+  // Derive initials from email (or name if stored in user_metadata)
+  const email = user?.email ?? "K";
+  const initials = email.substring(0, 2).toUpperCase();
+  const fullName =
+    (user?.user_metadata?.name as string) ??
+    email.replace(/@.*$/, "");
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -128,18 +133,21 @@ export default function RoleLayout({ role, navGroups, currentLabel, children }: 
             ))}
           </nav>
 
-          {/* User Profile Block */}
+          {/* User Profile Block — real auth data */}
           <div className="absolute bottom-0 left-0 right-0 border-t bg-card p-3">
-            <button className="flex w-full items-center gap-3 rounded-lg p-2 hover:bg-muted">
+            <Link
+              href={profileHref[role]}
+              className="flex w-full items-center gap-3 rounded-lg p-2 hover:bg-muted transition"
+            >
               <span className="flex size-8 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary">
-                AK
+                {initials}
               </span>
               <span className="min-w-0 flex-1 text-left">
-                <strong className="block truncate text-xs">Ayşe Karaca</strong>
-                <small className="text-muted-foreground">Merter Operasyon</small>
+                <strong className="block truncate text-xs">{fullName}</strong>
+                <small className="text-muted-foreground">{email}</small>
               </span>
-              <Settings2 className="size-4 text-muted-foreground" />
-            </button>
+              <User className="size-4 text-muted-foreground shrink-0" />
+            </Link>
           </div>
         </aside>
 
@@ -177,37 +185,52 @@ export default function RoleLayout({ role, navGroups, currentLabel, children }: 
                 {notifications && (
                   <Card className="absolute right-0 top-12 w-80 p-2 shadow-xl z-50">
                     <div className="p-3">
-                      <strong className="text-sm">Operasyon bildirimleri</strong>
+                      <strong className="text-sm">Bildirimler</strong>
                     </div>
-                    <div className="rounded-lg bg-muted p-3 text-xs">
-                      CH-2838 teslimatı 18 dakika gecikiyor.
-                    </div>
-                    <div className="mt-1 rounded-lg p-3 text-xs">
-                      CH-2840 için manuel atama bekleniyor.
+                    <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+                      Henüz bildirim bulunmuyor.
                     </div>
                   </Card>
                 )}
               </div>
 
-              {/* Role Dropdown Selector */}
-              <div className="relative group">
-                <button className="flex h-9 items-center gap-2 rounded-lg border bg-card px-3 text-xs font-semibold">
-                  <Grid2X2 className="size-4 text-primary" />
-                  {role}
-                  <ChevronDown className="size-3" />
+              {/* User menu (avatar + dropdown) */}
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenu(!userMenu)}
+                  onBlur={() => setTimeout(() => setUserMenu(false), 200)}
+                  className="flex size-9 items-center justify-center rounded-full bg-primary/12 text-xs font-semibold text-primary hover:bg-primary/20 transition"
+                >
+                  {initials}
                 </button>
-                <div className="invisible absolute right-0 top-10 w-44 rounded-lg border bg-card p-1 opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100 z-50">
-                  {(["Operasyon", "Şirket", "Kurye", "Yönetici"] as Role[]).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => handleRoleChange(r)}
-                      className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs hover:bg-muted"
+
+                {userMenu && (
+                  <div className="absolute right-0 top-12 w-56 rounded-xl border bg-card p-2 shadow-xl z-50">
+                    <div className="border-b px-3 py-2">
+                      <strong className="block text-xs truncate">{fullName}</strong>
+                      <small className="text-muted-foreground text-[10px]">{email}</small>
+                    </div>
+
+                    <Link
+                      href={profileHref[role]}
+                      onClick={() => setUserMenu(false)}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs hover:bg-muted mt-1"
                     >
-                      {r}
-                      {role === r && <Check className="size-3 text-primary" />}
+                      <Settings2 className="size-4 text-muted-foreground" />
+                      Profili Düzenle
+                    </Link>
+
+                    <hr className="my-1 border-t" />
+
+                    <button
+                      onClick={signOut}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs text-red-500 hover:bg-red-500/10"
+                    >
+                      <LogOut className="size-4" />
+                      Çıkış Yap
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </header>

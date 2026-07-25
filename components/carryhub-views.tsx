@@ -11,7 +11,8 @@ import {
 import { deliveries, intelligence, priceRules, transactions, type Delivery } from "@/lib/data";
 import { Badge, Button, Card, CardHeader, ComingSoon, Metric, StatusBadge } from "@/components/ui";
 import { createDelivery, acceptDelivery, updateDeliveryStatus, updateCompanyAddress, getCompany, getCompanyDeliveries, getCourierDailyStats } from "@/app/actions/delivery";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-client";
+const supabase = createClient();
 
 export function MiniMap({ active = 3 }: { active?: number }) {
   const points = ["left-[16%] top-[32%]", "left-[35%] top-[55%]", "left-[55%] top-[24%]", "left-[68%] top-[62%]", "left-[83%] top-[38%]"];
