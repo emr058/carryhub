@@ -58,6 +58,12 @@
   - Fiyatlandırma: kural tablosu + simülatör
   - Entegrasyonlar & güvenlik view'ları
 
+### [2026-07-25 ~22:00] Phase 2a — Delivery State Machine
+- `lib/delivery-state-machine.ts` — valid geçiş matrisi + rol bazlı guard'lar + Türkçe hata mesajları
+- `updateDeliveryStatus` artık geçersiz geçişleri reddediyor (PENDING→DELIVERED atlaması vs.)
+- `acceptDelivery` kurye atama öncesi state + rol kontrolü yapıyor
+- Build: 17 route, 0 hata ✅
+
 ## Notlar
 - Telegram cron deliver çalışmadı (execution_success: false). Sebep: bot token environment'da mevcut değil veya delivery kanalı kapalı.
 - Git commit checkpoint atıldı: phase-0.1 tag'i ile.

@@ -5,6 +5,8 @@ import { calculatePrice } from "@/lib/pricing";
 import { revalidatePath } from "next/cache";
 import { serializeDelivery } from "@/lib/serializers";
 import { getAuthEntity } from "@/lib/auth-entity";
+import { validateTransition, transitionErrorToMessage } from "@/lib/delivery-state-machine";
+import type { DeliveryStatus } from "@/lib/delivery-state-machine";
 
 export async function createDelivery(data: {
   packageType: string;
@@ -80,7 +82,19 @@ export async function acceptDelivery(deliveryId: string) {
       throw new Error(error || "Kurye bulunamadı.");
     }
 
-    const delivery = await prisma.delivery.update({
+    // Validate PENDING → ASSIGNED transition
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: deliveryId },
+    });
+    if (!delivery) {
+      throw new Error("Teslimat bulunamadı.");
+    }
+    const err = validateTransition(delivery.status as DeliveryStatus, "ASSIGNED", "COURIER");
+    if (err) {
+      throw new Error(transitionErrorToMessage(err));
+    }
+
+    const updated = await prisma.delivery.update({
       where: { id: deliveryId },
       data: {
         status: "ASSIGNED",
@@ -103,7 +117,7 @@ export async function acceptDelivery(deliveryId: string) {
 
 export async function updateDeliveryStatus(
   id: string,
-  status: "PENDING" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED",
+  status: DeliveryStatus,
   receiverName?: string
 ) {
   try {
@@ -117,6 +131,12 @@ export async function updateDeliveryStatus(
 
     if (!existing) {
       throw new Error("Teslimat bulunamadı.");
+    }
+
+    // Validate state transition
+    const err = validateTransition(existing.status as DeliveryStatus, status);
+    if (err) {
+      throw new Error(transitionErrorToMessage(err));
     }
 
     const updated = await prisma.delivery.update({
