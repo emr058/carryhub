@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 import { createClient } from "@/lib/supabase-server";
 
 export async function GET() {
@@ -9,15 +10,19 @@ export async function GET() {
     return NextResponse.json({ role: null }, { status: 401 });
   }
 
-  // Fetch user role from our DB
-  const { data: dbUser } = await supabase
-    .from("User")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  // Fetch user role via Prisma (consistent with register endpoint)
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true },
+    });
 
-  return NextResponse.json({
-    role: dbUser?.role || null,
-    email: user.email,
-  });
+    return NextResponse.json({
+      role: dbUser?.role || null,
+      email: user.email,
+    });
+  } catch (err) {
+    console.error("[role API] Prisma error:", err);
+    return NextResponse.json({ role: null }, { status: 500 });
+  }
 }

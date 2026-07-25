@@ -43,6 +43,9 @@ model Company {
   name           String
   defaultAddress String
   phone          String
+  taxId          String?
+  district       String?
+  isOnboarded    Boolean    @default(false)
   user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries     Delivery[]
 }
@@ -54,6 +57,8 @@ model Courier {
   phone       String
   vehicleType String
   isAvailable Boolean    @default(true)
+  district    String?
+  isOnboarded Boolean    @default(false)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries  Delivery[]
 }

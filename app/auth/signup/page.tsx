@@ -77,6 +77,8 @@ export default function SignupPage() {
 
     setSuccess(true);
     setLoading(false);
+    // Yönlendir
+    setTimeout(() => router.push("/onboarding"), 800);
   };
 
   if (success) {

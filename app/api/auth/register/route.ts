@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import prisma from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
@@ -19,65 +19,44 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
-
-    // Create User record
-    const { error: userError } = await supabase.from("User").insert({
-      id,
-      email,
-      role,
+    // Create User record via Prisma (handles UUID defaults)
+    await prisma.user.upsert({
+      where: { id },
+      create: { id, email, role },
+      update: {}, // already exists — skip
     });
-
-    if (userError) {
-      // If user already exists, that's ok — they might be re-registering
-      if (!userError.message.includes("duplicate")) {
-        return NextResponse.json(
-          { error: `Kullanıcı oluşturulamadı: ${userError.message}` },
-          { status: 500 }
-        );
-      }
-    }
 
     // Create role-specific record
     if (role === "COMPANY") {
-      const { error: companyError } = await supabase
-        .from("Company")
-        .insert({
+      await prisma.company.upsert({
+        where: { userId: id },
+        create: {
           userId: id,
           name,
           phone: phone || "",
           defaultAddress: "Belirtilmedi",
-        });
-
-      if (companyError && !companyError.message.includes("duplicate")) {
-        return NextResponse.json(
-          { error: `Firma profili oluşturulamadı: ${companyError.message}` },
-          { status: 500 }
-        );
-      }
+        },
+        update: {},
+      });
     } else {
-      const { error: courierError } = await supabase
-        .from("Courier")
-        .insert({
+      await prisma.courier.upsert({
+        where: { userId: id },
+        create: {
           userId: id,
           name,
           phone: phone || "",
           vehicleType: "Motorsiklet",
           isAvailable: true,
-        });
-
-      if (courierError && !courierError.message.includes("duplicate")) {
-        return NextResponse.json(
-          { error: `Kurye profili oluşturulamadı: ${courierError.message}` },
-          { status: 500 }
-        );
-      }
+        },
+        update: {},
+      });
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
+    console.error("Register error:", err);
     return NextResponse.json(
-      { error: "Beklenmeyen hata." },
+      { error: err.message || "Beklenmeyen hata." },
       { status: 500 }
     );
   }
