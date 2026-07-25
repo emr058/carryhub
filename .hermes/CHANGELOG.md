@@ -46,6 +46,18 @@
 - `app/api/telegram/test/route.ts` — Telegram bildirim API
 - Build: 17 route, 0 hata ✅
 
+### [2026-07-25 ~21:30] Phase 1 — Çekirdek İş Akışı
+- Integrations sayfası → `IntegrationsView` component'ine bağlandı (Logo ERP, Paraşüt, WhatsApp, Shopify, REST API)
+- Security sayfası → `SecurityView` component'ine bağlandı (maskeli iletişim, QR doğrulama, denetim izi, rol yetkileri)
+- Build: 17 route, 0 hata ✅
+- **Mevcut çekirdek iş akışı** (Phase 1 built-in):
+  - Firma portalı: sevkiyat oluşturma formu + canlı takip tablosu
+  - Kurye portalı: iş listeleme/kabul/PoD teslimat + navigasyon/arama
+  - Operasyon: dispatch board + canlı teslimat tablosu + manuel atama + realtime
+  - Finans & mutabakat: transaction geçmişi + dönem özeti
+  - Fiyatlandırma: kural tablosu + simülatör
+  - Entegrasyonlar & güvenlik view'ları
+
 ## Notlar
 - Telegram cron deliver çalışmadı (execution_success: false). Sebep: bot token environment'da mevcut değil veya delivery kanalı kapalı.
 - Git commit checkpoint atıldı: phase-0.1 tag'i ile.
