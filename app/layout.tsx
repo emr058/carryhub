@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/auth-provider";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
@@ -13,5 +14,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#0d1115", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="tr" className="bg-background dark" suppressHydrationWarning><body className={`${geist.variable} ${geistMono.variable} font-sans`} suppressHydrationWarning>{children}</body></html>;
+  return (
+    <html lang="tr" className="bg-background dark" suppressHydrationWarning>
+      <body className={`${geist.variable} ${geistMono.variable} font-sans`} suppressHydrationWarning>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  );
 }

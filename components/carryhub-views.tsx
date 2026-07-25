@@ -374,8 +374,8 @@ export function CompanyView({
     async function load() {
       const res = await getCompany();
       if (res.success && res.company) {
-        setCompany(res.company);
-        setAddressInput(res.company.defaultAddress);
+        setCompany(res.company as any);
+        setAddressInput((res.company as any).defaultAddress);
       }
     }
     load();
