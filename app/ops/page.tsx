@@ -1,18 +1,8 @@
-"use client";
+import { getOpsDashboardStats } from "@/app/actions/ops";
+import { OpsDashboardClient } from "./page-client";
 
-import { useState } from "react";
-import { CommandCenter, DeliveryDrawer } from "@/components/carryhub-views";
-import type { Delivery } from "@/lib/data";
+export default async function OpsDashboardPage() {
+  const data = await getOpsDashboardStats();
 
-export default function OpsCommandPage() {
-  const [selected, setSelected] = useState<Delivery | null>(null);
-
-  return (
-    <>
-      <CommandCenter onSelect={setSelected} />
-      {selected && (
-        <DeliveryDrawer delivery={selected} close={() => setSelected(null)} />
-      )}
-    </>
-  );
+  return <OpsDashboardClient data={data} />;
 }

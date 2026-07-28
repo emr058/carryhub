@@ -1,6 +1,15 @@
 # 🚀 CarryHub Geliştirme Günlüğü
 
-## Phase 0 — Temel Altyapı
+## Phase 3 — Ops Dashboard Gerçek Veri & Build İyileştirme
+
+### [2026-07-28 ~13:00] Ops Dashboard Gerçek Veri Bağlantısı
+- `app/actions/ops.ts` — `getOpsDashboardStats()` server action: canlı metric'ler (aktif teslimat, kurye bekleme, geciken iş, hacim), delivery listesi, müsait kuryeler
+- `app/ops/page.tsx` → **server component** oldu, veriyi server action'dan çekiyor
+- `app/ops/page-client.tsx` — Gerçek veriyi gösteren yeni dashboard client component (Metric kartlar, Dispatch board, Müdahale kuyruğu, Manuel atama paneli)
+- **Font fix**: Google Fonts (Geist) internet yokluğunda build hatası veriyordu → system font stack'e çekildi
+- `prisma/seed-demo.ts` — Güvenli demo data scripti (7 delivery + 6 transaction, mevcut veriyi silmez)
+- Build: 22 route, 0 hata ✅
+- Git checkpoint: `phase-3-ops-dashboard`
 
 ### [2026-07-25 21:15] Agency Agents Entegrasyonu
 - **Repo analiz**: 291 agent, 17 kategori (engineering, design, testing, security, product...)
