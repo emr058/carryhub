@@ -104,6 +104,28 @@
 - **State machine fix**: `delivery-state-machine.ts`'de ASSIGNED → DELIVERED direkt geçişe izin verildi (kurye teslimat kapatma hatası düzeldi)
 - Build: 22 route, 0 hata ✅
 
+## Phase 3 — İstanbul Haritası, Canlı Takip & Türkçeleştirme
+
+### [2026-07-28 ~14:00] İstanbul Haritası + Ops Dashboard Canlı Map
+- **Harita altyapısı**: Leaflet + react-leaflet kurulumu, `components/harita-view.tsx` — marker, polyline, çember, animasyonlu rota, pulse ikon desteği
+- **Geo motoru** (`lib/geo.ts`):
+  - Haversine mesafe hesaplama + `addressToCoord` (adresten tahmini koordinat)
+  - İstanbul Avrupa Yakası ilçe/district veritabanı
+  - Kurye çember sistemi (30/50/100 km) altyapısı
+- **Server actions** (`app/actions/geo.ts`):
+  - `getCompaniesGeo()` — firma konumları
+  - `getAvailableCouriersGeo()` — müsait kurye konumları
+  - `getNearbyCouriers(lat, lng, radiusKm)` — en yakın kurye (Uber mantığı)
+  - `updateCourierLocation()` — canlı konum güncelleme
+  - `getActiveDeliveriesGeo()` — aktif teslimat rotaları
+- **Prisma schema güncellemesi**: Company/Courier/Delivery → lat/lng alanları, CourierLocation modeli (konum geçmişi)
+- `prisma/seed-geo.ts` — mevcut tüm data'ya gerçekçi İstanbul koordinatları atandı
+- **Landing page** → SVG abstract harita kalktı, **gerçek İstanbul Leaflet haritası** geldi (Merter merkez, tekstil bölgeleri marker'ları, animasyonlu rota cycling)
+- **Ops Dashboard** → MiniMap kalktı, **OpsHarita** geldi: firma marker'ları, aktif teslimat rotaları, müsait kuryeler (pulse ikon + 30km çember)
+- **Türkçeleştirme**: "Smart Logistics Platform for Textile Industry" → "Akıllı Lojistik Platformu / Tekstil Sektörü İçin"
+- Build: 22 route, 0 hata ✅
+- Git checkpoint: `phase-3-full: Istanbul map, geo actions, ops harita, Turkish i18n`
+
 ## Notlar
 - Telegram cron deliver çalışmadı (execution_success: false). Sebep: bot token environment'da mevcut değil veya delivery kanalı kapalı.
 - Git commit checkpoint atıldı: phase-0.1 tag'i ile.

@@ -1,76 +1,74 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { getAuthEntity } from "@/lib/auth-entity";
 
 export async function getOpsDashboardStats() {
   try {
+    // 🔐 Sadece ADMIN erişebilir
+    const { role, error: authErr } = await getAuthEntity();
+    if (authErr || role !== "ADMIN") {
+      return {
+        success: false,
+        error: "Bu sayfaya erişim yetkiniz yok.",
+        metrics: null,
+        deliveries: [],
+        availableCouriers: [],
+      };
+    }
+
     const now = new Date();
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
-    // Tüm delivery'leri çek
-    const allDeliveries = await prisma.delivery.findMany({
+    // 📊 DB-level sorgular — JS filtering yok
+    const [activeCount, pendingCount, inTransitCount, assignedCount, todayCount, todayVolume, overdueCount, riskCount] =
+      await Promise.all([
+        prisma.delivery.count({ where: { status: { in: ["PENDING", "ASSIGNED", "IN_TRANSIT"] } } }),
+        prisma.delivery.count({ where: { status: "PENDING" } }),
+        prisma.delivery.count({ where: { status: "IN_TRANSIT" } }),
+        prisma.delivery.count({ where: { status: "ASSIGNED" } }),
+        prisma.delivery.count({ where: { createdAt: { gte: startOfDay } } }),
+        prisma.delivery.aggregate({
+          _sum: { finalPrice: true },
+          where: { createdAt: { gte: startOfDay } },
+        }),
+        prisma.delivery.count({
+          where: {
+            status: { in: ["PENDING", "ASSIGNED", "IN_TRANSIT"] },
+            createdAt: { lt: twoHoursAgo },
+          },
+        }),
+        prisma.delivery.count({
+          where: {
+            status: "PENDING",
+            createdAt: { lt: oneHourAgo },
+          },
+        }),
+      ]);
+
+    const todayVolumeVal = Number(todayVolume._sum.finalPrice || 0);
+
+    // 🚛 Son 50 delivery (dispatch board)
+    const recentDeliveries = await prisma.delivery.findMany({
       include: { company: true, courier: true },
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
 
-    // Metric hesapları
-    const activeDeliveries = allDeliveries.filter((d) =>
-      ["PENDING", "ASSIGNED", "IN_TRANSIT"].includes(d.status)
-    );
-    const pendingCourierCount = allDeliveries.filter(
-      (d) => d.status === "PENDING"
-    ).length;
-    const inTransitCount = allDeliveries.filter(
-      (d) => d.status === "IN_TRANSIT"
-    ).length;
+    // 👥 Müsait kuryeler
+    const [activeCouriers, totalCouriers, availableCouriers] = await Promise.all([
+      prisma.courier.count({ where: { isAvailable: true } }),
+      prisma.courier.count(),
+      prisma.courier.findMany({
+        where: { isAvailable: true },
+        take: 3,
+      }),
+    ]);
 
-    // Bugün oluşturulan delivery'ler
-    const todayDeliveries = allDeliveries.filter(
-      (d) => d.createdAt >= startOfDay
-    );
-    const todayVolume = todayDeliveries.reduce(
-      (sum, d) => sum + Number(d.finalPrice),
-      0
-    );
-
-    // Geciken iş: PENDING/ASSIGNED/IN_TRANSIT ve 2+ saat geçmiş
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-    const overdueDeliveries = allDeliveries.filter(
-      (d) =>
-        ["PENDING", "ASSIGNED", "IN_TRANSIT"].includes(d.status) &&
-        d.createdAt < twoHoursAgo
-    );
-
-    // Aktif kurye sayısı
-    const activeCourierCount = await prisma.courier.count({
-      where: { isAvailable: true },
-    });
-    const totalCourierCount = await prisma.courier.count();
-
-    // Dispatch board için status bazlı gruplama
-    const pendingDeliveries = allDeliveries.filter(
-      (d) => d.status === "PENDING"
-    );
-    const assignedDeliveries = allDeliveries.filter(
-      (d) => d.status === "ASSIGNED"
-    );
-
-    // Müdahale kuyruğu: PENDING ve 1+ saat geçmiş (risk)
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    const riskDeliveries = allDeliveries.filter(
-      (d) =>
-        d.status === "PENDING" && d.createdAt < oneHourAgo
-    );
-
-    // Manuel atama için müsait kuryeler
-    const availableCouriers = await prisma.courier.findMany({
-      where: { isAvailable: true },
-      take: 3,
-    });
-
-    // Delivery'leri serialize et (client-safe)
-    const serializedDeliveries = allDeliveries.map((d) => ({
+    const serializedDeliveries = recentDeliveries.map((d) => ({
       id: d.id.slice(0, 8).toUpperCase(),
       company: d.company?.name || "Bilinmeyen Firma",
       route: `${d.pickupAddress} → ${d.dropoffAddress}`,
@@ -81,28 +79,33 @@ export async function getOpsDashboardStats() {
       courier: d.courier?.name || "Atama bekliyor",
       status: statusLabel(d.status),
       eta: "—",
-      risk: riskDeliveries.some((r) => r.id === d.id),
+      risk: ["PENDING"].includes(d.status) && d.createdAt < oneHourAgo,
     }));
+
+    const slaRate =
+      activeCount > 0
+        ? `%${((activeCount - overdueCount) / activeCount * 100).toFixed(1)} SLA`
+        : "%100 SLA";
+
+    const courierUtilization =
+      totalCouriers > 0
+        ? `%${Math.round((activeCouriers / totalCouriers) * 100)} kullanım`
+        : "%0 kullanım";
 
     return {
       success: true,
       metrics: {
-        activeCount: activeDeliveries.length,
-        pendingCourierCount,
-        overdueCount: overdueDeliveries.length,
-        slaRate: `%${activeDeliveries.length > 0
-            ? ((activeDeliveries.length - overdueDeliveries.length) / activeDeliveries.length * 100).toFixed(1)
-            : "100"
-          } SLA`,
-        activeCourierCount,
-        totalCourierCount,
-        courierUtilization: totalCourierCount > 0
-          ? `%${Math.round((activeCourierCount / totalCourierCount) * 100)} kullanım`
-          : "%0 kullanım",
-        todayVolume: `₺${todayVolume.toLocaleString("tr-TR")}`,
-        todayCount: todayDeliveries.length,
-        pendingCount: pendingDeliveries.length,
-        assignedCount: assignedDeliveries.length,
+        activeCount,
+        pendingCourierCount: pendingCount,
+        overdueCount,
+        slaRate,
+        activeCourierCount: activeCouriers,
+        totalCourierCount: totalCouriers,
+        courierUtilization,
+        todayVolume: `₺${todayVolumeVal.toLocaleString("tr-TR")}`,
+        todayCount,
+        pendingCount,
+        assignedCount,
         inTransitCount,
       },
       deliveries: serializedDeliveries,

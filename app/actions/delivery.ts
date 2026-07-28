@@ -49,10 +49,16 @@ export async function createDelivery(data: {
 
 export async function getDeliveries() {
   try {
-    // Admin/ops can see all deliveries
+    // 🔐 Sadece ADMIN erişebilir
+    const { role, error: authErr } = await getAuthEntity();
+    if (authErr || role !== "ADMIN") {
+      return { success: false, error: "Bu sayfaya erişim yetkiniz yok.", deliveries: [] };
+    }
+
     const deliveries = await prisma.delivery.findMany({
       include: { company: true, courier: true },
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
     return { success: true, deliveries: (deliveries || []).map(serializeDelivery) };
   } catch (error: any) {
@@ -63,10 +69,17 @@ export async function getDeliveries() {
 
 export async function getPendingDeliveries() {
   try {
+    // 🔐 Oturum kontrolü
+    const { role, error: authErr } = await getAuthEntity();
+    if (authErr) {
+      return { success: false, error: "Oturum açmanız gerekiyor.", deliveries: [] };
+    }
+
     const deliveries = await prisma.delivery.findMany({
       where: { status: "PENDING" },
       include: { company: true },
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
     return { success: true, deliveries: (deliveries || []).map(serializeDelivery) };
   } catch (error: any) {
@@ -121,6 +134,12 @@ export async function updateDeliveryStatus(
   receiverName?: string
 ) {
   try {
+    // 🔐 Önce kullanıcıyı al, sonra ownership kontrolü yap
+    const { entity: userEntity, role, error: authErr } = await getAuthEntity();
+    if (authErr || !userEntity) {
+      throw new Error(authErr || "Oturum açmanız gerekiyor.");
+    }
+
     const existing = await prisma.delivery.findUnique({
       where: { id },
       include: {
@@ -131,6 +150,22 @@ export async function updateDeliveryStatus(
 
     if (!existing) {
       throw new Error("Teslimat bulunamadı.");
+    }
+
+    // 🔐 Ownership kontrolü:
+    // - ADMIN her şeyi yapabilir
+    // - COMPANY sadece kendi teslimatlarını güncelleyebilir
+    // - COURIER sadece kendine atanmış teslimatları güncelleyebilir
+    if (role === "COMPANY") {
+      if (existing.company?.userId !== (userEntity as any).userId) {
+        throw new Error("Bu teslimatı güncelleme yetkiniz yok.");
+      }
+    } else if (role === "COURIER") {
+      if (existing.courierId !== (userEntity as any).id) {
+        throw new Error("Bu teslimat size ait değil.");
+      }
+    } else if (role !== "ADMIN") {
+      throw new Error("Bu işlem için yetkiniz yok.");
     }
 
     // Validate state transition
@@ -201,6 +236,22 @@ export async function updateDeliveryStatus(
 
 export async function updateCompanyAddress(companyId: string, address: string) {
   try {
+    // 🔐 Kullanıcıyı al, sadece kendi firmasının adresini değiştirebilsin
+    const { entity: userEntity, role, error: authErr } = await getAuthEntity();
+    if (authErr || !userEntity) {
+      throw new Error(authErr || "Oturum açmanız gerekiyor.");
+    }
+
+    // ADMIN her firmanın adresini değiştirebilir
+    // COMPANY sadece kendi adresini değiştirebilir
+    if (role === "COMPANY") {
+      if ((userEntity as any).id !== companyId) {
+        throw new Error("Yalnızca kendi firma adresinizi değiştirebilirsiniz.");
+      }
+    } else if (role !== "ADMIN") {
+      throw new Error("Bu işlem için yetkiniz yok.");
+    }
+
     const company = await prisma.company.update({
       where: { id: companyId },
       data: { defaultAddress: address },
@@ -230,6 +281,7 @@ export async function getCourierDeliveries() {
       },
       include: { company: true },
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
 
     return { success: true, deliveries: (deliveries || []).map(serializeDelivery), courierId };
@@ -264,6 +316,7 @@ export async function getCompanyDeliveries() {
       where: { companyId },
       include: { company: true, courier: true },
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
 
     return { success: true, deliveries: (deliveries || []).map(serializeDelivery), companyId };
