@@ -12,7 +12,8 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import { Badge, Button, Card, CardHeader, Metric, StatusBadge } from "@/components/ui";
-import { DeliveryDrawer, MiniMap } from "@/components/carryhub-views";
+import OpsHarita from "@/components/ops-harita";
+import { DeliveryDrawer } from "@/components/carryhub-views";
 
 export function OpsDashboardClient({ data }: { data: any }) {
   const [selected, setSelected] = useState<any>(null);
@@ -103,7 +104,7 @@ export function OpsDashboardClient({ data }: { data: any }) {
             description="Kurye konumları, tekstil kümeleri ve terminal akışı"
             action={<Badge tone="primary">30 sn önce</Badge>}
           />
-          <MiniMap active={Math.min(deliveries.length, 5)} />
+          <OpsHarita className="m-3" />
         </Card>
 
         <Card>

@@ -45,6 +45,8 @@ model Company {
   phone          String
   taxId          String?
   district       String?
+  lat            Float?
+  lng            Float?
   isOnboarded    Boolean    @default(false)
   user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries     Delivery[]
@@ -58,9 +60,25 @@ model Courier {
   vehicleType String
   isAvailable Boolean    @default(true)
   district    String?
+  lat         Float?
+  lng         Float?
   isOnboarded Boolean    @default(false)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries  Delivery[]
+  locations   CourierLocation[]
+}
+
+model CourierLocation {
+  id        String   @id @default(uuid())
+  courierId String
+  lat       Float
+  lng       Float
+  heading   Float?
+  speed     Float?
+  courier   Courier  @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([courierId, createdAt])
 }
 
 model Delivery {
@@ -69,6 +87,10 @@ model Delivery {
   courierId        String?
   pickupAddress    String
   dropoffAddress   String
+  pickupLat        Float?
+  pickupLng        Float?
+  dropoffLat       Float?
+  dropoffLng       Float?
   packageType      String
   price            Decimal
   finalPrice       Decimal        @default(0)

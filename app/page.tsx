@@ -2,11 +2,14 @@
 
 import { useAuth } from "@/components/auth-provider";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Route, Building2, Truck, Command, ArrowRight,
   LogIn, UserPlus, ChevronDown, MapPin, Package,
   TrendingUp, ShieldCheck, Navigation,
 } from "lucide-react";
+
+const IstanbulLandingMap = dynamic(() => import("@/components/landing-map"), { ssr: false });
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
@@ -60,118 +63,20 @@ export default function LandingPage() {
               </span>
             </div>
 
-            {/* ===== MAP ANIMATION CONTAINER ===== */}
+            {/* ===== REAL ISTANBUL MAP ===== */}
             <div className="relative w-full max-w-2xl aspect-[2/1] rounded-2xl border bg-card/40 backdrop-blur overflow-hidden shadow-2xl">
-              {/* Map grid inside */}
-              <div
-                className="absolute inset-0 opacity-20"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-                  backgroundSize: "24px 24px",
-                }}
-              />
-
-              {/* Route SVG */}
-              <svg
-                className="absolute inset-0 w-full h-full"
-                viewBox="0 0 600 300"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                <defs>
-                  <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.1" />
-                    <stop offset="50%" stopColor="var(--primary)" stopOpacity="0.6" />
-                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.1" />
-                  </linearGradient>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                  {/* Path for the truck to follow — same curve as the route line */}
-                  <path
-                    id="routePath"
-                    d="M60,200 C120,60 200,240 300,150 C400,60 480,220 540,180"
-                    fill="none"
-                  />
-                </defs>
-
-                {/* Animated route line (draws in) */}
-                <path
-                  d="M60,200 C120,60 200,240 300,150 C400,60 480,220 540,180"
-                  fill="none"
-                  stroke="url(#routeGrad)"
-                  strokeWidth="3"
-                  strokeDasharray="800"
-                  strokeDashoffset="800"
-                  className="animate-route-draw"
-                />
-
-                {/* Start marker — Merter */}
-                <g filter="url(#glow)">
-                  <circle cx="60" cy="200" r="6" fill="var(--primary)" className="animate-ping-slow" opacity="0.5" />
-                  <circle cx="60" cy="200" r="4" fill="var(--primary)" />
-                  <foreignObject x="30" y="215" width="80" height="30">
-                    <div className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
-                      <Package className="size-2.5" />
-                      Merter
-                    </div>
-                  </foreignObject>
-                </g>
-
-                {/* End marker — Müşteri */}
-                <g filter="url(#glow)">
-                  <circle cx="540" cy="180" r="6" fill="var(--accent)" className="animate-ping-slow" opacity="0.5" />
-                  <circle cx="540" cy="180" r="4" fill="var(--accent)" />
-                  <foreignObject x="480" y="195" width="80" height="30">
-                    <div className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
-                      <MapPin className="size-2.5" />
-                      Teslimat
-                    </div>
-                  </foreignObject>
-                </g>
-
-                {/* Moving truck along the route */}
-                <g className="animate-truck-move">
-                  <foreignObject x="-12" y="-12" width="24" height="24">
-                    <div className="flex items-center justify-center size-6 rounded-full bg-primary shadow-lg shadow-primary/30">
-                      <Truck className="size-3.5 text-primary-foreground" />
-                    </div>
-                  </foreignObject>
-                </g>
-              </svg>
-
-              {/* Bottom info bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-card/80 to-transparent flex items-end px-5 pb-2">
-                <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
-                    Canlı takip
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Navigation className="size-2.5" />
-                    Rota optimizasyonu
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <ShieldCheck className="size-2.5" />
-                    Güvenli teslimat
-                  </span>
-                </div>
-              </div>
+              <IstanbulLandingMap />
             </div>
 
             {/* ===== HEADLINE ===== */}
             <div className="flex flex-col items-center text-center gap-4 max-w-3xl">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
                 <span className="bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent">
-                  Smart Logistics Platform
+                  Akıllı Lojistik Platformu
                 </span>
                 <br />
                 <span className="bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-                  for Textile Industry
+                  Tekstil Sektörü İçin
                 </span>
               </h1>
               <p className="max-w-xl text-sm sm:text-base text-muted-foreground leading-relaxed">
